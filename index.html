@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>A320 - Vérification de chargement</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      height: 100%;
+      background: #202020;
+      touch-action: none;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+    #status {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: white;
+      font-family: sans-serif;
+      z-index: 10;
+      background: rgba(0,0,0,0.7);
+      padding: 6px 12px;
+      border-radius: 6px;
+    }
+    .error {
+      background: rgba(255,0,0,0.8);
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div id="status">Initialisation…</div>
+
+  <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/examples/js/controls/OrbitControls.js"></script>
+
+  <script>
+    let scene, camera, renderer, controls;
+    let initialized = false;
+
+    try {
+      // Initialisation Three.js
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
+      camera.position.set(0, 10, 50);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      scene.background = new THREE.Color(0x202020);
+
+      scene.add(new THREE.DirectionalLight(0xffffff, 2).position.set(10, 50, 50));
+      scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+      scene.add(new THREE.GridHelper(200, 20, 0xffffff, 0xffffff));
+
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableZoom = false;
+      controls.enablePan = false;
+      controls.target.set(0, 5, 0);
+      controls.update();
+
+      console.log("✅ Initialisation Three.js OK");
+      document.getElementById("status").textContent = "Chargement de l’avion…";
+      initialized = true;
+
+      const loader = new THREE.GLTFLoader();
+      const modelUrl = 'https://kykygosed.github.io/Flightsim3/a320-200_with_cockpit_ver_viii.glb';
+
+      loader.load(
+        modelUrl,
+        (gltf) => {
+          const airplane = gltf.scene;
+          airplane.position.set(0, 0, 0);
+          airplane.rotation.y = Math.PI;
+          scene.add(airplane);
+          document.getElementById("status").style.display = "none";
+          console.log("✈️ Avion chargé.");
+        },
+        (xhr) => {
+          const percent = (xhr.loaded / xhr.total) * 100;
+          document.getElementById("status").textContent = `Chargement de l’avion… ${percent.toFixed(0)}%`;
+        },
+        (error) => {
+          console.error("❌ Erreur de chargement du modèle :", error);
+          const status = document.getElementById("status");
+          status.textContent = "Erreur : avion non chargé.";
+          status.classList.add("error");
+        }
+      );
+
+      window.addEventListener("resize", () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      animate();
+    } catch (e) {
+      console.error("❌ Erreur d’initialisation Three.js :", e);
+      const status = document.getElementById("status");
+      status.textContent = "Erreur critique : Three.js ne fonctionne pas.";
+      status.classList.add("error");
+    }
+
+    // Timeout pour afficher une erreur si rien ne charge
+    setTimeout(() => {
+      if (!initialized) return; // erreur critique déjà affichée
+      const canvas = document.querySelector("canvas");
+      if (!canvas || canvas.width === 0) {
+        const status = document.getElementById("status");
+        status.textContent = "Erreur : canvas non initialisé.";
+        status.classList.add("error");
+      }
+    }, 5000);
+
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+  </script>
+</body>
+</html>
