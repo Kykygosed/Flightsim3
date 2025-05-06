@@ -2,41 +2,45 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>A320 - Vue Cockpit</title>
+  <title>A320 - Vue Cockpit Pivotante</title>
   <style>
     body { margin: 0; overflow: hidden; background: black; }
   </style>
 </head>
 <body>
 
-  <!-- Three.js et GLTFLoader -->
+  <!-- Three.js + GLTFLoader + OrbitControls -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/examples/js/controls/OrbitControls.js"></script>
 
   <script>
-    let scene, camera, renderer;
+    let scene, camera, renderer, controls;
 
     init();
     animate();
 
     function init() {
-      // Scène et caméra
       scene = new THREE.Scene();
       scene.background = new THREE.Color(0x101010);
 
       camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
-      camera.position.set(0, 1.7, 5); // Position initiale, à l'avant
+      camera.position.set(0, 2, 10); // Caméra placée un peu en retrait
 
-      // Rendu
       renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
       document.body.appendChild(renderer.domElement);
 
-      // Lumière
       const light = new THREE.AmbientLight(0xffffff, 1.5);
       scene.add(light);
 
-      // Chargement du modèle
+      // === OrbitControls pour rotation caméra au swipe ===
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableZoom = false;
+      controls.enablePan = false;
+      controls.target.set(0, 2, 0); // Regarder vers le cockpit
+      controls.update();
+
       const modelUrl = 'https://kykygosed.github.io/Flightsim3/a320-200_with_cockpit_ver_viii.glb';
       const loader = new THREE.GLTFLoader();
 
@@ -45,11 +49,6 @@
         function (gltf) {
           const airplane = gltf.scene;
           scene.add(airplane);
-
-          // Ajuster la position de la caméra selon ton modèle
-          // Teste différentes valeurs ici si nécessaire :
-          camera.position.set(0, 2, 10);
-          camera.lookAt(new THREE.Vector3(0, 2, 0)); // Vers le centre du cockpit
         },
         undefined,
         function (error) {
@@ -57,7 +56,6 @@
         }
       );
 
-      // Adaptation au redimensionnement
       window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
@@ -67,6 +65,7 @@
 
     function animate() {
       requestAnimationFrame(animate);
+      controls.update();
       renderer.render(scene, camera);
     }
   </script>
