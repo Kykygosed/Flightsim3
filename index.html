@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>A320 avec Three.js modules</title>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+        background: #202020;
+      }
+      #status {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        color: white;
+        background: rgba(0, 0, 0, 0.6);
+        padding: 6px 12px;
+        font-family: sans-serif;
+        z-index: 10;
+        border-radius: 6px;
+      }
+      .error {
+        background: rgba(255, 0, 0, 0.8);
+        color: white;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="status">Chargement…</div>
+    <script type="module">
+      import * as THREE from 'https://unpkg.com/three@0.157.0/build/three.module.js';
+      import { OrbitControls } from 'https://unpkg.com/three@0.157.0/examples/jsm/controls/OrbitControls.js';
+      import { GLTFLoader } from 'https://unpkg.com/three@0.157.0/examples/jsm/loaders/GLTFLoader.js';
+
+      let scene, camera, renderer, controls;
+
+      try {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x202020);
+
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
+        camera.position.set(0, 10, 50);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        controls = new OrbitControls(camera, renderer.domElement);
+        controls.target.set(0, 5, 0);
+        controls.update();
+        controls.enableZoom = false;
+        controls.enablePan = false;
+
+        const light = new THREE.DirectionalLight(0xffffff, 2);
+        light.position.set(10, 50, 50);
+        scene.add(light);
+        scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+
+        const grid = new THREE.GridHelper(200, 20, 0xffffff, 0xffffff);
+        scene.add(grid);
+
+        const loader = new GLTFLoader();
+        const modelUrl = 'https://kykygosed.github.io/Flightsim3/a320-200_with_cockpit_ver_viii.glb';
+
+        loader.load(
+          modelUrl,
+          (gltf) => {
+            const airplane = gltf.scene;
+            airplane.position.set(0, 0, 0);
+            airplane.rotation.y = Math.PI;
+            scene.add(airplane);
+            document.getElementById('status').style.display = 'none';
+            console.log('✈️ Avion chargé.');
+          },
+          (xhr) => {
+            const percent = (xhr.loaded / xhr.total) * 100;
+            document.getElementById('status').textContent = `Chargement de l’avion… ${percent.toFixed(0)}%`;
+          },
+          (err) => {
+            console.error('Erreur de chargement :', err);
+            const status = document.getElementById('status');
+            status.textContent = 'Erreur de chargement du modèle.';
+            status.classList.add('error');
+          }
+        );
+
+        window.addEventListener('resize', () => {
+          camera.aspect = window.innerWidth / window.innerHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        function animate() {
+          requestAnimationFrame(animate);
+          controls.update();
+          renderer.render(scene, camera);
+        }
+
+        animate();
+      } catch (e) {
+        console.error('Erreur critique :', e);
+        const status = document.getElementById('status');
+        status.textContent = 'Erreur critique : échec Three.js.';
+        status.classList.add('error');
+      }
+    </script>
+  </body>
+</html>
