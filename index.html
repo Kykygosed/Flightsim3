@@ -2,13 +2,12 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>PFD Simulateur</title>
+  <title>PFD Simulateur - Roll seulement</title>
   <style>
     html, body {
       margin: 0;
       background: black;
       font-family: monospace;
-      color: white;
       overflow: hidden;
     }
 
@@ -59,39 +58,33 @@
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = "black";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-
       ctx.fillStyle = "red";
       ctx.font = "bold 24px monospace";
       ctx.textAlign = "center";
       ctx.fillText("ERREUR", canvas.width / 2, canvas.height / 2);
-
       errorDiv.style.display = "block";
     }
 
-    function drawPFD(roll, pitch) {
+    function drawPFD(roll) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.save();
+
+      // Centre de rotation
       ctx.translate(canvas.width / 2, canvas.height / 2);
 
-      // Roulis : on inverse le signe pour que l'horizon s'incline dans l'autre sens
+      // Rotation du roulis (inversé pour simuler horizon)
       const rollRad = -roll * Math.PI / 180;
-      const pitchOffset = pitch * 3; // facteur d'échelle pour le pitch
-
-      // D'abord on tourne le repère
       ctx.rotate(rollRad);
 
-      // Puis on applique le pitch dans le repère tourné
-      ctx.translate(0, pitchOffset);
-
-      // Fond ciel
+      // Ciel
       ctx.fillStyle = "#0099ff";
-      ctx.fillRect(-canvas.width, -canvas.height * 2, canvas.width * 2, canvas.height);
+      ctx.fillRect(-canvas.width * 2, -canvas.height * 2, canvas.width * 4, canvas.height);
 
-      // Fond sol
+      // Sol
       ctx.fillStyle = "#996633";
-      ctx.fillRect(-canvas.width, 0, canvas.width * 2, canvas.height * 2);
+      ctx.fillRect(-canvas.width * 2, 0, canvas.width * 4, canvas.height * 2);
 
-      // Ligne de l'horizon
+      // Ligne de l’horizon
       ctx.strokeStyle = "white";
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -99,7 +92,7 @@
       ctx.lineTo(canvas.width, 0);
       ctx.stroke();
 
-      // Graduations horizontales
+      // Graduations
       for (let i = -250; i <= 250; i += 50) {
         ctx.beginPath();
         ctx.moveTo(i, -10);
@@ -113,15 +106,14 @@
       ctx.strokeStyle = "white";
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(canvas.width/2 - 15, canvas.height/2);
-      ctx.lineTo(canvas.width/2 + 15, canvas.height/2);
+      ctx.moveTo(canvas.width / 2 - 15, canvas.height / 2);
+      ctx.lineTo(canvas.width / 2 + 15, canvas.height / 2);
       ctx.stroke();
     }
 
     function handleOrientation(event) {
-      const pitch = event.beta || 0;  // Inclinaison haut/bas
-      const roll = event.gamma || 0;  // Inclinaison gauche/droite
-      drawPFD(roll, pitch);
+      const roll = event.gamma || 0; // Inclinaison gauche/droite
+      drawPFD(roll);
     }
 
     function requestPermissionAndStart() {
