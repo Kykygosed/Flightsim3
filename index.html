@@ -77,13 +77,13 @@
       ctx.save();
       ctx.translate(canvas.width / 2, canvas.height / 2);
 
-      // Transformation pour ajuster le roulis (roll) et l'inclinaison (pitch)
+      // Appliquer l'inclinaison (pitch) et le roulis (roll)
       const horizonOffsetY = Math.sin(pitch * Math.PI / 180) * 200; // Inclinaison
       const horizonRotation = roll * Math.PI / 180; // Roulis
-      
-      // Appliquer l'inclinaison et le roulis au contexte du canvas
-      ctx.rotate(horizonRotation);
+
+      // Appliquer l'inclinaison au canvas avant de dessiner l'horizon
       ctx.translate(0, horizonOffsetY); // déplacer l'horizon en fonction du pitch
+      ctx.rotate(horizonRotation); // Appliquer le roulis
 
       // Sky
       ctx.fillStyle = "#0099ff";
