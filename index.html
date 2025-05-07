@@ -4,16 +4,34 @@
   <meta charset="UTF-8">
   <title>PFD Simulateur</title>
   <style>
-    body {
+    html, body {
       margin: 0;
       background: black;
       font-family: monospace;
+      color: white;
+      overflow: hidden;
     }
+
     canvas {
       display: block;
       margin: auto;
       background: black;
     }
+
+    #startButton {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #444;
+      color: white;
+      border: 1px solid white;
+      cursor: pointer;
+      z-index: 10;
+    }
+
     #error {
       position: absolute;
       top: 50%;
@@ -22,19 +40,20 @@
       color: red;
       font-size: 2em;
       display: none;
+      z-index: 5;
     }
   </style>
 </head>
 <body>
   <canvas id="pfd" width="500" height="500"></canvas>
   <div id="error">ERREUR</div>
+  <button id="startButton">Démarrer le PFD</button>
 
   <script>
     const canvas = document.getElementById("pfd");
     const ctx = canvas.getContext("2d");
     const errorDiv = document.getElementById("error");
-
-    let permissionGranted = false;
+    const startButton = document.getElementById("startButton");
 
     function drawError() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -43,11 +62,12 @@
 
       ctx.fillStyle = "red";
       ctx.font = "bold 24px monospace";
-      ctx.fillText("ERREUR", canvas.width / 2 - 50, canvas.height / 2);
+      ctx.textAlign = "center";
+      ctx.fillText("ERREUR", canvas.width / 2, canvas.height / 2);
 
-      // Speed & Altimeter
-      ctx.fillText("ERREUR", 20, canvas.height / 2);
-      ctx.fillText("ERREUR", canvas.width - 100, canvas.height / 2);
+      // Altitude et vitesse
+      ctx.fillText("ERREUR", 80, canvas.height / 2);
+      ctx.fillText("ERREUR", canvas.width - 80, canvas.height / 2);
 
       errorDiv.style.display = "block";
     }
@@ -73,13 +93,14 @@
       ctx.moveTo(-200, 0);
       ctx.lineTo(200, 0);
       ctx.stroke();
+
       ctx.restore();
 
-      // Side Info
+      // Static speed & altitude labels (left and right)
       ctx.fillStyle = "white";
       ctx.font = "16px monospace";
-      ctx.fillText("SPD 175", 20, 30);
-      ctx.fillText("ALT 2600", canvas.width - 130, 30);
+      ctx.fillText("175", 20, 40); // Speed
+      ctx.fillText("2600", canvas.width - 60, 40); // Altitude
     }
 
     function handleOrientation(event) {
@@ -88,13 +109,14 @@
       drawPFD(roll, pitch);
     }
 
-    function setupDeviceOrientation() {
-      if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+    function requestPermissionAndStart() {
+      if (typeof DeviceOrientationEvent !== "undefined" &&
+          typeof DeviceOrientationEvent.requestPermission === "function") {
         DeviceOrientationEvent.requestPermission()
           .then(response => {
-            if (response === 'granted') {
-              permissionGranted = true;
+            if (response === "granted") {
               window.addEventListener("deviceorientation", handleOrientation);
+              startButton.style.display = "none";
             } else {
               drawError();
             }
@@ -104,13 +126,13 @@
             drawError();
           });
       } else {
-        // Non-iOS browsers
-        permissionGranted = true;
+        // Android / autres navigateurs
         window.addEventListener("deviceorientation", handleOrientation);
+        startButton.style.display = "none";
       }
     }
 
-    setupDeviceOrientation();
+    startButton.addEventListener("click", requestPermissionAndStart);
   </script>
 </body>
 </html>
