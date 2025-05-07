@@ -2,12 +2,11 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>PFD Simulateur - Horizon Horizontal</title>
+  <title>Simulateur PFD</title>
   <style>
     html, body {
       margin: 0;
       background: black;
-      font-family: monospace;
       overflow: hidden;
     }
 
@@ -69,30 +68,32 @@
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.save();
 
-      // Centre de rotation
-      ctx.translate(canvas.width / 2, canvas.height / 2);
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
 
-      // Rotation inverse du roll pour simuler un vrai horizon
+      ctx.translate(centerX, centerY);
+
+      // Inverser le roll pour que l'horizon réagisse comme en avion
       const rollRad = -roll * Math.PI / 180;
       ctx.rotate(rollRad);
 
-      // Ciel
+      // Dessiner le ciel (haut)
       ctx.fillStyle = "#0099ff";
-      ctx.fillRect(-canvas.width * 2, -canvas.height * 2, canvas.width * 4, canvas.height);
+      ctx.fillRect(-1000, -1000, 2000, 1000); // ciel en haut
 
-      // Sol
+      // Dessiner le sol (bas)
       ctx.fillStyle = "#996633";
-      ctx.fillRect(-canvas.width * 2, 0, canvas.width * 4, canvas.height * 2);
+      ctx.fillRect(-1000, 0, 2000, 1000); // sol en bas
 
-      // Ligne de l’horizon
+      // Ligne d'horizon
       ctx.strokeStyle = "white";
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(-canvas.width, 0);
-      ctx.lineTo(canvas.width, 0);
+      ctx.moveTo(-500, 0);
+      ctx.lineTo(500, 0);
       ctx.stroke();
 
-      // Graduations horizontales
+      // Petites graduations sur l'horizon
       for (let i = -250; i <= 250; i += 50) {
         ctx.beginPath();
         ctx.moveTo(i, -10);
@@ -102,12 +103,12 @@
 
       ctx.restore();
 
-      // Réticule fixe au centre
+      // Réticule central (fixe)
       ctx.strokeStyle = "white";
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(canvas.width / 2 - 15, canvas.height / 2);
-      ctx.lineTo(canvas.width / 2 + 15, canvas.height / 2);
+      ctx.moveTo(centerX - 15, centerY);
+      ctx.lineTo(centerX + 15, centerY);
       ctx.stroke();
     }
 
