@@ -55,6 +55,9 @@
     const errorDiv = document.getElementById("error");
     const startButton = document.getElementById("startButton");
 
+    let altitude = 3000; // Altitude de départ
+    let speed = 200; // Vitesse de départ
+
     function drawError() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = "black";
@@ -75,7 +78,7 @@
 
       // Inclinaison (pitch) et roulis (roll)
       const horizonOffsetY = Math.sin(pitch * Math.PI / 180) * 200; // Inclinaison
-      const horizonRotation = roll * Math.PI / 180; // Roulis
+      const horizonRotation = -roll * Math.PI / 180; // Roulis inverse, inverser l'effet
 
       // Appliquer l'inclinaison (verticalement) sans changer l'orientation de l'horizon
       ctx.translate(0, horizonOffsetY); // Déplacer l'horizon en fonction du pitch
@@ -117,6 +120,18 @@
       // Appliquer le roulis (rotation horizontale)
       ctx.rotate(horizonRotation); // Rotation de l'horizon avec le roulis
 
+      // Dessiner les informations de vitesse et d'altitude
+      ctx.fillStyle = "white";
+      ctx.font = "18px monospace";
+      ctx.fillText(`Alt: ${altitude} ft`, -canvas.width / 2 + 10, -canvas.height / 2 + 30);
+      ctx.fillText(`Spd: ${speed} kt`, canvas.width / 2 - 100, -canvas.height / 2 + 30);
+
+      // Dessiner un petit cercle au centre pour simuler un réticule
+      ctx.beginPath();
+      ctx.arc(0, 0, 5, 0, 2 * Math.PI);
+      ctx.strokeStyle = "white";
+      ctx.stroke();
+      
       ctx.restore();
     }
 
