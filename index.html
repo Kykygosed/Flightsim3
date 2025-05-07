@@ -1,110 +1,48 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html>
   <head>
-    <meta charset="UTF-8" />
-    <title>FlightSim3D - A320</title>
+    <title>PFD Horizon Mobile</title>
     <style>
-      body {
-        margin: 0;
-        overflow: hidden;
-        background: #202020;
-      }
-      #status {
-        position: absolute;
-        top: 10px;
-        left: 10px;
-        color: white;
-        background: rgba(0, 0, 0, 0.6);
-        padding: 6px 12px;
-        font-family: sans-serif;
-        z-index: 10;
-        border-radius: 6px;
-      }
-      .error {
-        background: rgba(255, 0, 0, 0.8);
-        color: white;
-      }
+      canvas { background: #000; display: block; margin: auto; }
     </style>
   </head>
   <body>
-    <div id="status">Chargement…</div>
-    <script type="module">
-      import * as THREE from 'https://unpkg.com/three@0.157.0/build/three.module.js';
-      import { OrbitControls } from 'https://unpkg.com/three@0.157.0/examples/jsm/controls/OrbitControls.js';
-      import { GLTFLoader } from 'https://unpkg.com/three@0.157.0/examples/jsm/loaders/GLTFLoader.js';
+    <canvas id="pfd" width="300" height="300"></canvas>
+    <script>
+      const canvas = document.getElementById("pfd");
+      const ctx = canvas.getContext("2d");
 
-      let scene, camera, renderer, controls;
+      function drawHorizon(roll, pitch) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.save();
 
-      try {
-        scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x202020);
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate(-roll * Math.PI / 180); // Roll: rotation autour de l'axe Z
+        ctx.translate(0, pitch * 2);       // Pitch: translation verticale
 
-        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
-        camera.position.set(0, 10, 50);
+        // Ciel
+        ctx.fillStyle = "#0099ff";
+        ctx.fillRect(-200, -200, 400, 200);
+        // Terre
+        ctx.fillStyle = "#996633";
+        ctx.fillRect(-200, 0, 400, 200);
 
-        renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
+        // Ligne d'horizon
+        ctx.strokeStyle = "white";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-200, 0);
+        ctx.lineTo(200, 0);
+        ctx.stroke();
 
-        controls = new OrbitControls(camera, renderer.domElement);
-        controls.target.set(0, 5, 0);
-        controls.update();
-        controls.enableZoom = false;
-        controls.enablePan = false;
-
-        const light = new THREE.DirectionalLight(0xffffff, 2);
-        light.position.set(10, 50, 50);
-        scene.add(light);
-        scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-
-        const grid = new THREE.GridHelper(500, 100, 0xffffff, 0xffffff);
-        grid.position.y = -1;
-        scene.add(grid);
-
-        const loader = new GLTFLoader();
-        const modelUrl = './a320-200_with_cockpit_ver_viii.glb';
-
-        loader.load(
-          modelUrl,
-          (gltf) => {
-            const airplane = gltf.scene;
-            airplane.position.set(0, 0, 0);
-            airplane.rotation.y = Math.PI;
-            scene.add(airplane);
-            document.getElementById('status').style.display = 'none';
-            console.log('✅ Avion chargé');
-          },
-          (xhr) => {
-            const percent = (xhr.loaded / xhr.total) * 100;
-            document.getElementById('status').textContent = `Chargement de l’avion… ${percent.toFixed(0)}%`;
-          },
-          (error) => {
-            console.error('❌ Erreur de chargement du modèle :', error);
-            const status = document.getElementById('status');
-            status.textContent = 'Erreur de chargement du modèle.';
-            status.classList.add('error');
-          }
-        );
-
-        window.addEventListener('resize', () => {
-          camera.aspect = window.innerWidth / window.innerHeight;
-          camera.updateProjectionMatrix();
-          renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-
-        function animate() {
-          requestAnimationFrame(animate);
-          controls.update();
-          renderer.render(scene, camera);
-        }
-
-        animate();
-      } catch (e) {
-        console.error('❌ Erreur critique :', e);
-        const status = document.getElementById('status');
-        status.textContent = 'Erreur critique : échec Three.js.';
-        status.classList.add('error');
+        ctx.restore();
       }
+
+      window.addEventListener("deviceorientation", (event) => {
+        const pitch = event.beta || 0; // Inclinaison avant-arrière
+        const roll = event.gamma || 0; // Inclinaison gauche-droite
+        drawHorizon(roll, pitch);
+      });
     </script>
   </body>
 </html>
