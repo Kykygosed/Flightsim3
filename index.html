@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>PFD Simulateur - Roll seulement</title>
+  <title>PFD Simulateur - Horizon Horizontal</title>
   <style>
     html, body {
       margin: 0;
@@ -72,7 +72,7 @@
       // Centre de rotation
       ctx.translate(canvas.width / 2, canvas.height / 2);
 
-      // Rotation du roulis (inversé pour simuler horizon)
+      // Rotation inverse du roll pour simuler un vrai horizon
       const rollRad = -roll * Math.PI / 180;
       ctx.rotate(rollRad);
 
@@ -92,7 +92,7 @@
       ctx.lineTo(canvas.width, 0);
       ctx.stroke();
 
-      // Graduations
+      // Graduations horizontales
       for (let i = -250; i <= 250; i += 50) {
         ctx.beginPath();
         ctx.moveTo(i, -10);
@@ -112,7 +112,7 @@
     }
 
     function handleOrientation(event) {
-      const roll = event.gamma || 0; // Inclinaison gauche/droite
+      const roll = event.gamma || 0;
       drawPFD(roll);
     }
 
