@@ -1,48 +1,116 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <title>PFD Horizon Mobile</title>
-    <style>
-      canvas { background: #000; display: block; margin: auto; }
-    </style>
-  </head>
-  <body>
-    <canvas id="pfd" width="300" height="300"></canvas>
-    <script>
-      const canvas = document.getElementById("pfd");
-      const ctx = canvas.getContext("2d");
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>PFD Simulateur</title>
+  <style>
+    body {
+      margin: 0;
+      background: black;
+      font-family: monospace;
+    }
+    canvas {
+      display: block;
+      margin: auto;
+      background: black;
+    }
+    #error {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: red;
+      font-size: 2em;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="pfd" width="500" height="500"></canvas>
+  <div id="error">ERREUR</div>
 
-      function drawHorizon(roll, pitch) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.save();
+  <script>
+    const canvas = document.getElementById("pfd");
+    const ctx = canvas.getContext("2d");
+    const errorDiv = document.getElementById("error");
 
-        ctx.translate(canvas.width / 2, canvas.height / 2);
-        ctx.rotate(-roll * Math.PI / 180); // Roll: rotation autour de l'axe Z
-        ctx.translate(0, pitch * 2);       // Pitch: translation verticale
+    let permissionGranted = false;
 
-        // Ciel
-        ctx.fillStyle = "#0099ff";
-        ctx.fillRect(-200, -200, 400, 200);
-        // Terre
-        ctx.fillStyle = "#996633";
-        ctx.fillRect(-200, 0, 400, 200);
+    function drawError() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "black";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Ligne d'horizon
-        ctx.strokeStyle = "white";
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(-200, 0);
-        ctx.lineTo(200, 0);
-        ctx.stroke();
+      ctx.fillStyle = "red";
+      ctx.font = "bold 24px monospace";
+      ctx.fillText("ERREUR", canvas.width / 2 - 50, canvas.height / 2);
 
-        ctx.restore();
+      // Speed & Altimeter
+      ctx.fillText("ERREUR", 20, canvas.height / 2);
+      ctx.fillText("ERREUR", canvas.width - 100, canvas.height / 2);
+
+      errorDiv.style.display = "block";
+    }
+
+    function drawPFD(roll, pitch) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.save();
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.rotate(-roll * Math.PI / 180);
+      ctx.translate(0, pitch * 2);
+
+      // Sky
+      ctx.fillStyle = "#0099ff";
+      ctx.fillRect(-300, -300, 600, 300);
+      // Ground
+      ctx.fillStyle = "#996633";
+      ctx.fillRect(-300, 0, 600, 300);
+
+      // Horizon Line
+      ctx.strokeStyle = "white";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-200, 0);
+      ctx.lineTo(200, 0);
+      ctx.stroke();
+      ctx.restore();
+
+      // Side Info
+      ctx.fillStyle = "white";
+      ctx.font = "16px monospace";
+      ctx.fillText("SPD 175", 20, 30);
+      ctx.fillText("ALT 2600", canvas.width - 130, 30);
+    }
+
+    function handleOrientation(event) {
+      const pitch = event.beta || 0;
+      const roll = event.gamma || 0;
+      drawPFD(roll, pitch);
+    }
+
+    function setupDeviceOrientation() {
+      if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+        DeviceOrientationEvent.requestPermission()
+          .then(response => {
+            if (response === 'granted') {
+              permissionGranted = true;
+              window.addEventListener("deviceorientation", handleOrientation);
+            } else {
+              drawError();
+            }
+          })
+          .catch(err => {
+            console.error(err);
+            drawError();
+          });
+      } else {
+        // Non-iOS browsers
+        permissionGranted = true;
+        window.addEventListener("deviceorientation", handleOrientation);
       }
+    }
 
-      window.addEventListener("deviceorientation", (event) => {
-        const pitch = event.beta || 0; // Inclinaison avant-arrière
-        const roll = event.gamma || 0; // Inclinaison gauche-droite
-        drawHorizon(roll, pitch);
-      });
-    </script>
-  </body>
+    setupDeviceOrientation();
+  </script>
+</body>
 </html>
