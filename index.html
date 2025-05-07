@@ -80,20 +80,39 @@
       // Appliquer l'inclinaison (verticalement) sans changer l'orientation de l'horizon
       ctx.translate(0, horizonOffsetY); // Déplacer l'horizon en fonction du pitch
 
+      // Répéter le ciel et le sol à l'infini
+      const groundHeight = 300; // Hauteur du sol
+      const skyHeight = 300; // Hauteur du ciel
+      const repeatLength = 600;
+
       // Dessiner le ciel
       ctx.fillStyle = "#0099ff";
-      ctx.fillRect(-300, -300, 600, 300); // Ciel
+      for (let i = -Math.floor(canvas.height / 2); i < Math.floor(canvas.height / 2); i += repeatLength) {
+        ctx.fillRect(-canvas.width / 2, i, canvas.width, skyHeight); // Ciel
+      }
+
       // Dessiner le sol
       ctx.fillStyle = "#996633";
-      ctx.fillRect(-300, 0, 600, 300); // Sol
+      for (let i = -Math.floor(canvas.height / 2); i < Math.floor(canvas.height / 2); i += repeatLength) {
+        ctx.fillRect(-canvas.width / 2, i + skyHeight, canvas.width, groundHeight); // Sol
+      }
 
       // Dessiner la ligne de l'horizon
       ctx.strokeStyle = "white";
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(-300, 0);
-      ctx.lineTo(300, 0);
+      ctx.moveTo(-canvas.width / 2, 0);
+      ctx.lineTo(canvas.width / 2, 0);
       ctx.stroke();
+
+      // Dessiner les graduations sur l'horizon
+      const gradationLength = 20; // Longueur de la graduation
+      for (let i = -canvas.width / 2; i < canvas.width / 2; i += 50) {
+        ctx.beginPath();
+        ctx.moveTo(i, -10);
+        ctx.lineTo(i, 10);
+        ctx.stroke();
+      }
 
       // Appliquer le roulis (rotation horizontale)
       ctx.rotate(horizonRotation); // Rotation de l'horizon avec le roulis
