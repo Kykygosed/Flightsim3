@@ -55,9 +55,6 @@
     const errorDiv = document.getElementById("error");
     const startButton = document.getElementById("startButton");
 
-    let altitude = 3000; // Altitude de départ
-    let speed = 200; // Vitesse de départ
-
     function drawError() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = "black";
@@ -76,69 +73,55 @@
       ctx.save();
       ctx.translate(canvas.width / 2, canvas.height / 2);
 
-      // Inclinaison (pitch) et roulis (roll)
-      const horizonOffsetY = Math.sin(pitch * Math.PI / 180) * 200; // Inclinaison (verticalement)
-      const horizonRotation = -roll * Math.PI / 180; // Roulis inversé (horizontalement)
+      // Roulis : on inverse le signe pour que l'horizon s'incline dans l'autre sens
+      const rollRad = -roll * Math.PI / 180;
+      const pitchOffset = pitch * 3; // facteur d'échelle pour le pitch
 
-      // Appliquer l'inclinaison (verticalement)
-      ctx.translate(0, horizonOffsetY); // Déplacer l'horizon en fonction du pitch
+      // D'abord on tourne le repère
+      ctx.rotate(rollRad);
 
-      // Répéter le ciel et le sol à l'infini
-      const groundHeight = 300; // Hauteur du sol
-      const skyHeight = 300; // Hauteur du ciel
-      const repeatLength = 600;
+      // Puis on applique le pitch dans le repère tourné
+      ctx.translate(0, pitchOffset);
 
-      // Dessiner le ciel
+      // Fond ciel
       ctx.fillStyle = "#0099ff";
-      for (let i = -Math.floor(canvas.height / 2); i < Math.floor(canvas.height / 2); i += repeatLength) {
-        ctx.fillRect(-canvas.width / 2, i, canvas.width, skyHeight); // Ciel
-      }
+      ctx.fillRect(-canvas.width, -canvas.height * 2, canvas.width * 2, canvas.height);
 
-      // Dessiner le sol
+      // Fond sol
       ctx.fillStyle = "#996633";
-      for (let i = -Math.floor(canvas.height / 2); i < Math.floor(canvas.height / 2); i += repeatLength) {
-        ctx.fillRect(-canvas.width / 2, i + skyHeight, canvas.width, groundHeight); // Sol
-      }
+      ctx.fillRect(-canvas.width, 0, canvas.width * 2, canvas.height * 2);
 
-      // Dessiner la ligne de l'horizon
+      // Ligne de l'horizon
       ctx.strokeStyle = "white";
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(-canvas.width / 2, 0);
-      ctx.lineTo(canvas.width / 2, 0);
+      ctx.moveTo(-canvas.width, 0);
+      ctx.lineTo(canvas.width, 0);
       ctx.stroke();
 
-      // Dessiner les graduations sur l'horizon
-      const gradationLength = 20; // Longueur de la graduation
-      for (let i = -canvas.width / 2; i < canvas.width / 2; i += 50) {
+      // Graduations horizontales
+      for (let i = -250; i <= 250; i += 50) {
         ctx.beginPath();
         ctx.moveTo(i, -10);
         ctx.lineTo(i, 10);
         ctx.stroke();
       }
 
-      // Appliquer le roulis (rotation horizontale) inversé
-      ctx.rotate(horizonRotation); // Rotation de l'horizon avec le roulis
-
-      // Affichage des informations : altitude et vitesse
-      ctx.fillStyle = "white";
-      ctx.font = "18px monospace";
-      ctx.fillText(`Alt: ${altitude} ft`, -canvas.width / 2 + 10, -canvas.height / 2 + 30);
-      ctx.fillText(`Spd: ${speed} kt`, canvas.width / 2 - 100, -canvas.height / 2 + 30);
-
-      // Dessiner un petit réticule pour l'horizon
-      ctx.beginPath();
-      ctx.arc(0, 0, 5, 0, 2 * Math.PI);
-      ctx.strokeStyle = "white";
-      ctx.stroke();
-      
       ctx.restore();
+
+      // Réticule fixe au centre
+      ctx.strokeStyle = "white";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(canvas.width/2 - 15, canvas.height/2);
+      ctx.lineTo(canvas.width/2 + 15, canvas.height/2);
+      ctx.stroke();
     }
 
     function handleOrientation(event) {
-      const pitch = event.beta || 0;  // Inclinaison du dispositif (haut/bas)
-      const roll = event.gamma || 0;  // Roulis du dispositif (gauche/droite)
-      drawPFD(roll, pitch); // Dessiner l'horizon avec les nouvelles valeurs
+      const pitch = event.beta || 0;  // Inclinaison haut/bas
+      const roll = event.gamma || 0;  // Inclinaison gauche/droite
+      drawPFD(roll, pitch);
     }
 
     function requestPermissionAndStart() {
@@ -158,7 +141,6 @@
             drawError();
           });
       } else {
-        // Android / autres navigateurs
         window.addEventListener("deviceorientation", handleOrientation);
         startButton.style.display = "none";
       }
