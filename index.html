@@ -76,8 +76,14 @@
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.save();
       ctx.translate(canvas.width / 2, canvas.height / 2);
-      ctx.rotate(-roll * Math.PI / 180);
-      ctx.translate(0, pitch * 2);
+
+      // Transformation pour ajuster le roulis (roll) et l'inclinaison (pitch)
+      const horizonOffsetY = Math.sin(pitch * Math.PI / 180) * 200; // Inclinaison
+      const horizonRotation = roll * Math.PI / 180; // Roulis
+      
+      // Appliquer l'inclinaison et le roulis au contexte du canvas
+      ctx.rotate(horizonRotation);
+      ctx.translate(0, horizonOffsetY); // déplacer l'horizon en fonction du pitch
 
       // Sky
       ctx.fillStyle = "#0099ff";
@@ -96,7 +102,7 @@
 
       ctx.restore();
 
-      // Static speed & altitude labels (left and right)
+      // Labels
       ctx.fillStyle = "white";
       ctx.font = "16px monospace";
       ctx.fillText("175", 20, 40); // Speed
@@ -104,9 +110,9 @@
     }
 
     function handleOrientation(event) {
-      const pitch = event.beta || 0;
-      const roll = event.gamma || 0;
-      drawPFD(roll, pitch);
+      const pitch = event.beta || 0;  // Inclinaison du dispositif
+      const roll = event.gamma || 0;  // Roulis du dispositif
+      drawPFD(roll, pitch); // Dessiner l'horizon avec les nouvelles valeurs
     }
 
     function requestPermissionAndStart() {
