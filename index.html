@@ -77,10 +77,10 @@
       ctx.translate(canvas.width / 2, canvas.height / 2);
 
       // Inclinaison (pitch) et roulis (roll)
-      const horizonOffsetY = Math.sin(pitch * Math.PI / 180) * 200; // Inclinaison
-      const horizonRotation = -roll * Math.PI / 180; // Roulis inverse, inverser l'effet
+      const horizonOffsetY = Math.sin(pitch * Math.PI / 180) * 200; // Inclinaison (verticalement)
+      const horizonRotation = -roll * Math.PI / 180; // Roulis inversé (horizontalement)
 
-      // Appliquer l'inclinaison (verticalement) sans changer l'orientation de l'horizon
+      // Appliquer l'inclinaison (verticalement)
       ctx.translate(0, horizonOffsetY); // Déplacer l'horizon en fonction du pitch
 
       // Répéter le ciel et le sol à l'infini
@@ -117,16 +117,16 @@
         ctx.stroke();
       }
 
-      // Appliquer le roulis (rotation horizontale)
+      // Appliquer le roulis (rotation horizontale) inversé
       ctx.rotate(horizonRotation); // Rotation de l'horizon avec le roulis
 
-      // Dessiner les informations de vitesse et d'altitude
+      // Affichage des informations : altitude et vitesse
       ctx.fillStyle = "white";
       ctx.font = "18px monospace";
       ctx.fillText(`Alt: ${altitude} ft`, -canvas.width / 2 + 10, -canvas.height / 2 + 30);
       ctx.fillText(`Spd: ${speed} kt`, canvas.width / 2 - 100, -canvas.height / 2 + 30);
 
-      // Dessiner un petit cercle au centre pour simuler un réticule
+      // Dessiner un petit réticule pour l'horizon
       ctx.beginPath();
       ctx.arc(0, 0, 5, 0, 2 * Math.PI);
       ctx.strokeStyle = "white";
@@ -136,8 +136,8 @@
     }
 
     function handleOrientation(event) {
-      const pitch = event.beta || 0;  // Inclinaison du dispositif
-      const roll = event.gamma || 0;  // Roulis du dispositif
+      const pitch = event.beta || 0;  // Inclinaison du dispositif (haut/bas)
+      const roll = event.gamma || 0;  // Roulis du dispositif (gauche/droite)
       drawPFD(roll, pitch); // Dessiner l'horizon avec les nouvelles valeurs
     }
 
