@@ -108,6 +108,30 @@
     });
     joystick.on('end', () => move = { x: 0, y: 0 });
 
+    // Contrôle tactile pour tourner la caméra
+    let lastTouch = null;
+    document.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) {
+        lastTouch = e.touches[0];
+      }
+    });
+    document.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 1 && lastTouch) {
+        const touch = e.touches[0];
+        const deltaX = touch.clientX - lastTouch.clientX;
+        const deltaY = touch.clientY - lastTouch.clientY;
+        
+        yaw -= deltaX * 0.005;  // Déplacement horizontal
+        pitch -= deltaY * 0.005;  // Déplacement vertical
+        pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch));
+        
+        lastTouch = touch;
+      }
+    });
+    document.addEventListener('touchend', () => {
+      lastTouch = null;
+    });
+
     // Loop
     function animate() {
       requestAnimationFrame(animate);
