@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Terrain Cubique + Joystick</title>
+  <title>Terrain Cubique Texturé</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <style>
     body { margin: 0; overflow: hidden; }
@@ -21,7 +21,7 @@
 <body>
   <div id="joystickZone"></div>
   <script>
-    // === Perlin noise simple ===
+    // Perlin simple
     class Perlin {
       constructor() {
         this.p = Array.from({length: 512}, (_, i) => i % 256).sort(() => Math.random() - 0.5);
@@ -54,7 +54,6 @@
 
     const noise = new Perlin();
 
-    // === Scene and camera ===
     const scene = new THREE.Scene();
     const aspect = window.innerWidth / window.innerHeight;
     const d = 50;
@@ -66,20 +65,26 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    // === Lights ===
+    // Lumières
     scene.add(new THREE.AmbientLight(0xffffff, 0.5));
     const light = new THREE.DirectionalLight(0xffffff, 1);
     light.position.set(100, 100, 100);
     scene.add(light);
 
-    // === Terrain blocks ===
+    // Texture depuis ton URL
+    const loader = new THREE.TextureLoader();
+    const texture = loader.load("https://imgur.com/xlR0xFM.jpeg");
+    texture.magFilter = THREE.NearestFilter;
+
+    // Matériau avec texture
+    const blockMat = new THREE.MeshLambertMaterial({ map: texture });
+    const blockGeo = new THREE.BoxGeometry(4, 4, 4);
+
+    // Terrain
     const blockSize = 4;
-    const worldSize = 20; // 20x20
+    const worldSize = 20;
     const maxHeight = 5;
     const scale = 0.1;
-
-    const blockGeo = new THREE.BoxGeometry(blockSize, blockSize, blockSize);
-    const blockMat = new THREE.MeshLambertMaterial({ color: 0x55aa55 });
 
     for (let x = 0; x < worldSize; x++) {
       for (let z = 0; z < worldSize; z++) {
@@ -96,7 +101,7 @@
       }
     }
 
-    // === Joueur (cube bleu) ===
+    // Joueur
     const player = new THREE.Mesh(
       new THREE.BoxGeometry(3, 5, 3),
       new THREE.MeshLambertMaterial({ color: 0x0000ff })
@@ -104,7 +109,7 @@
     player.position.set(10 * blockSize, blockSize * (maxHeight + 1), 10 * blockSize);
     scene.add(player);
 
-    // === Mouvement du joueur ===
+    // Mouvement du joueur
     let move = { x: 0, z: 0 };
     const speed = 20;
     const clock = new THREE.Clock();
@@ -128,7 +133,7 @@
       move.z = 0;
     });
 
-    // === Animation ===
+    // Animation
     function animate() {
       requestAnimationFrame(animate);
       const delta = clock.getDelta();
@@ -139,6 +144,7 @@
 
     animate();
 
+    // Resize
     window.addEventListener('resize', () => {
       const aspect = window.innerWidth / window.innerHeight;
       camera.left = -d * aspect;
