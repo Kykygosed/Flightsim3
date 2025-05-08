@@ -28,6 +28,7 @@
   <!-- Librairies -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.9.0/dist/nipplejs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/simplex-noise/simplex-noise.min.js"></script>
 
   <script>
     // Scene de base
@@ -51,6 +52,7 @@
     const chunkSize = 8;  // Taille d'un chunk (8x8 blocs)
     const chunkDepth = 20;  // Profondeur du chunk (20 blocs)
     const maxChunks = 1;  // Générer seulement un chunk autour du joueur
+    const simplex = new SimplexNoise();
 
     // Variable pour gérer la génération des chunks
     let chunks = [];
@@ -66,9 +68,10 @@
       // Boucle pour générer les blocs d'un chunk
       for (let x = 0; x < chunkSize; x++) {
         for (let z = 0; z < chunkSize; z++) {
-          // Générer une hauteur aléatoire pour la colonne de blocs
-          const height = Math.floor(Math.random() * 10) + 60;  // Variation de terrain
-          
+          // Générer une hauteur aléatoire avec bruit de Perlin
+          const perlinNoise = simplex.noise2D((x + xOffset) * 0.1, (z + zOffset) * 0.1);
+          const height = Math.floor((perlinNoise * 10) + 60);  // Variation de terrain avec bruit
+
           // Générer les blocs de fond pour chaque hauteur
           for (let y = 0; y < chunkDepth; y++) {
             let blockColor;
