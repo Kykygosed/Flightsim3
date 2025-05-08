@@ -9,10 +9,8 @@
         canvas { display: block; }
         #joystick { position: fixed; bottom: 30px; left: 30px; }
     </style>
-    <!-- Inclure Three.js et Noise.js -->
+    <!-- Inclure Three.js et NippleJS pour le joystick -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/noisejs/1.0.0/noise.min.js"></script>
-    <!-- Inclure NippleJS pour le joystick -->
     <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.8.3/dist/nipplejs.min.js"></script>
 </head>
 <body>
@@ -20,52 +18,41 @@
     <div id="joystick"></div>
 
     <script>
-        // Configuration de la scène, caméra et rendu
+        // Création de la scène, de la caméra et du rendu
         const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const camera = new THREE.OrthographicCamera(
+            window.innerWidth / -2, window.innerWidth / 2, window.innerHeight / 2, window.innerHeight / -2, 0.1, 1000
+        );
         const renderer = new THREE.WebGLRenderer();
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // Création de la géométrie du terrain (plane)
-        const size = 256;
-        const scale = 10;
-        const geometry = new THREE.PlaneGeometry(size, size, size - 1, size - 1);
-        geometry.rotateX(- Math.PI / 2); // Rotation pour avoir le terrain horizontalement
+        // Création d'un terrain simple en 3D (une grande grille)
+        const terrainSize = 10;
+        const terrainWidth = 20;
+        const terrainHeight = 20;
+        const terrainGeometry = new THREE.PlaneGeometry(terrainWidth, terrainHeight, terrainSize - 1, terrainSize - 1);
+        terrainGeometry.rotateX(- Math.PI / 2); // Rotation pour avoir le terrain horizontalement
 
-        // Création du terrain avec le bruit de Perlin
-        const noise = new Noise(Math.random());
-        for (let i = 0; i < geometry.vertices.length; i++) {
-            const vertex = geometry.vertices[i];
-            const x = vertex.x / scale;
-            const y = vertex.z / scale;
-            vertex.y = noise.perlin2(x, y) * 10; // Altitude basée sur le bruit de Perlin
-        }
-
-        const material = new THREE.MeshLambertMaterial({ color: 0x228822 });
-        const terrain = new THREE.Mesh(geometry, material);
+        // Appliquer un matériau simple (vert)
+        const terrainMaterial = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
+        const terrain = new THREE.Mesh(terrainGeometry, terrainMaterial);
         scene.add(terrain);
 
-        // Création du joueur (un cube simple)
-        const playerGeometry = new THREE.BoxGeometry(1, 2, 1);
-        const playerMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
-        const player = new THREE.Mesh(playerGeometry, playerMaterial);
-        scene.add(player);
+        // Positionner la caméra en vue isométrique
+        camera.position.set(30, 30, 30);  // Positionnement de la caméra
+        camera.lookAt(new THREE.Vector3(0, 0, 0));  // Regarder le centre du terrain
 
-        // Position de la caméra pour une vue du dessus
-        camera.position.set(0, 50, 50);
-        camera.lookAt(new THREE.Vector3(0, 0, 0));
-
-        // Ajout de la lumière
+        // Ajouter une lumière
         const light = new THREE.PointLight(0xffffff, 1, 100);
-        light.position.set(10, 50, 10);
+        light.position.set(20, 50, 20);
         scene.add(light);
 
         // Variables pour le déplacement avec le joystick
         let joystickMovement = { x: 0, z: 0 };
         let playerSpeed = 0.5;
 
-        // Configuration du joystick avec NippleJS
+        // Création du joystick virtuel avec NippleJS
         const joystick = nipplejs.create({
             zone: document.getElementById('joystick'),
             color: 'blue',
@@ -73,21 +60,31 @@
             threshold: 0.1
         });
 
-        // Mettre à jour le mouvement du joueur avec le joystick
+        // Mise à jour du mouvement du joueur avec le joystick
         joystick.on('move', (evt, data) => {
             joystickMovement.x = data.vector.x;
             joystickMovement.z = data.vector.y;
         });
 
-        // Déplacement du joueur en fonction du joystick
+        // Création du joueur sous forme d'un cube
+        const playerGeometry = new THREE.BoxGeometry(1, 2, 1);
+        const playerMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+        const player = new THREE.Mesh(playerGeometry, playerMaterial);
+        scene.add(player);
+
+        // Positionner le joueur au centre du terrain
+        player.position.set(0, 1, 0);  // Position initiale du joueur (au-dessus du terrain)
+
+        // Déplacer le joueur selon les entrées du joystick
         function movePlayer() {
             player.position.x += joystickMovement.x * playerSpeed;
             player.position.z += joystickMovement.z * playerSpeed;
 
-            // Vérification de la hauteur du terrain sous le joueur (simplification)
-            const playerPos = player.position;
-            const terrainHeight = terrain.geometry.vertices[Math.floor(playerPos.x) + size / 2 + (Math.floor(playerPos.z) + size / 2) * size].y;
-            player.position.y = terrainHeight + 1; // Maintien le joueur au-dessus du terrain
+            // Limiter le joueur à rester à l'intérieur du terrain
+            if (player.position.x < -terrainWidth / 2) player.position.x = -terrainWidth / 2;
+            if (player.position.x > terrainWidth / 2) player.position.x = terrainWidth / 2;
+            if (player.position.z < -terrainHeight / 2) player.position.z = -terrainHeight / 2;
+            if (player.position.z > terrainHeight / 2) player.position.z = terrainHeight / 2;
         }
 
         // Fonction d'animation
