@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Minecraft-Like avec Vue FPS, Saut, Terrain Aléatoire</title>
+  <title>Minecraft-Like Corrigé</title>
   <style>
     html, body {
       margin: 0;
@@ -30,21 +30,31 @@
   <script src="https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/dist/esm/simplex-noise.min.js"></script>
 
   <script>
-    // === SETUP THREE.JS ===
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+    scene.background = new THREE.Color(0x87ceeb); // ciel bleu
+
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 10, 5); // caméra plus haute
+
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    // Lighting (ambiante + directionnelle)
-    const ambientLight = new THREE.AmbientLight(0x888888);
-    scene.add(ambientLight);
+    // Lumières
+    scene.add(new THREE.AmbientLight(0x888888));
     const light = new THREE.DirectionalLight(0xffffff, 1);
     light.position.set(20, 40, 20);
     scene.add(light);
 
-    // === TERRAIN GÉNÉRÉ PAR BRUIT DE PERLIN ===
+    // Cube test visible (rouge)
+    const testCube = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshStandardMaterial({ color: 0xff0000 })
+    );
+    testCube.position.set(0, 1.5, 0);
+    scene.add(testCube);
+
+    // Terrain généré par bruit de Perlin
     const simplex = new SimplexNoise();
     const blockSize = 1;
     const terrainSize = 30;
@@ -64,12 +74,31 @@
       }
     }
 
-    // === JOUEUR / CAMÉRA ===
-    camera.position.set(0, 2, 5);
+    // Contrôle
     let velocityY = 0;
     let onGround = false;
+    let pitch = 0, yaw = 0;
+    camera.rotation.order = "YXZ";
+    let isMouseDown = false;
 
-    // === JOYSTICK ===
+    document.body.addEventListener('mousedown', () => isMouseDown = true);
+    document.body.addEventListener('mouseup', () => isMouseDown = false);
+    document.body.addEventListener('mousemove', e => {
+      if (isMouseDown) {
+        yaw -= e.movementX * 0.002;
+        pitch -= e.movementY * 0.002;
+        pitch = Math.max(-Math.PI/2, Math.min(Math.PI/2, pitch));
+      }
+    });
+
+    document.addEventListener('keydown', e => {
+      if (e.code === 'Space' && onGround) {
+        velocityY = 0.15;
+        onGround = false;
+      }
+    });
+
+    // Joystick
     let move = { x: 0, y: 0 };
     const joystick = nipplejs.create({
       zone: document.getElementById('joystick-container'),
@@ -87,35 +116,10 @@
     });
     joystick.on('end', () => { move.x = 0; move.y = 0; });
 
-    // === CONTROLE DE VUE FPS ===
-    let pitch = 0, yaw = 0;
-    let isMouseDown = false;
-
-    document.body.addEventListener('mousedown', () => isMouseDown = true);
-    document.body.addEventListener('mouseup', () => isMouseDown = false);
-    document.body.addEventListener('mousemove', e => {
-      if (isMouseDown) {
-        yaw -= e.movementX * 0.002;
-        pitch -= e.movementY * 0.002;
-        pitch = Math.max(-Math.PI/2, Math.min(Math.PI/2, pitch));
-      }
-    });
-
-    camera.rotation.order = "YXZ";
-
-    // === SAUT CLAVIER ===
-    document.addEventListener('keydown', e => {
-      if (e.code === 'Space' && onGround) {
-        velocityY = 0.15;
-        onGround = false;
-      }
-    });
-
-    // === ANIMATION LOOP ===
+    // Animation
     function animate() {
       requestAnimationFrame(animate);
 
-      // Mouvements via joystick
       const angle = Math.atan2(move.x, move.y);
       const dist = Math.min(1, Math.sqrt(move.x ** 2 + move.y ** 2));
       const speed = 0.1 * dist;
@@ -126,17 +130,15 @@
       camera.position.x += dx;
       camera.position.z -= dz;
 
-      // Gravité
       velocityY -= 0.01;
       camera.position.y += velocityY;
 
-      if (camera.position.y < 1.5) {
-        camera.position.y = 1.5;
+      if (camera.position.y < 2) {
+        camera.position.y = 2;
         velocityY = 0;
         onGround = true;
       }
 
-      // Appliquer rotation
       camera.rotation.y = yaw;
       camera.rotation.x = pitch;
 
@@ -145,9 +147,8 @@
 
     animate();
 
-    // === ADAPTATION TAILLE ===
     window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth/window.innerHeight;
+      camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
