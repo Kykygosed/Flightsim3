@@ -1,251 +1,102 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <title>Minecraft-like test</title>
-  <style>
-    body, html {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-    }
-    #joystick-container {
-      position: absolute;
-      bottom: 20px;
-      left: 20px;
-      width: 120px;
-      height: 120px;
-      z-index: 10;
-    }
-    canvas {
-      display: block;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini Minecraft Dungeons</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #e0e0e0; }
+        canvas { display: block; }
+        #joystick { position: fixed; bottom: 30px; left: 30px; }
+    </style>
+    <!-- Inclure Three.js et Noise.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/noisejs/1.0.0/noise.min.js"></script>
+    <!-- Inclure NippleJS pour le joystick -->
+    <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.8.3/dist/nipplejs.min.js"></script>
 </head>
 <body>
-  <div id="joystick-container"></div>
+    <!-- Joystick -->
+    <div id="joystick"></div>
 
-  <!-- Librairies -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.9.0/dist/nipplejs.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/simplex-noise/simplex-noise.min.js"></script>
+    <script>
+        // Configuration de la scène, caméra et rendu
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
 
-  <script>
-    // Scene de base
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x87ceeb);
+        // Création de la géométrie du terrain (plane)
+        const size = 256;
+        const scale = 10;
+        const geometry = new THREE.PlaneGeometry(size, size, size - 1, size - 1);
+        geometry.rotateX(- Math.PI / 2); // Rotation pour avoir le terrain horizontalement
 
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    const playerHeight = 2;  // Hauteur du joueur pour éviter qu'il ne traverse le terrain
-
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
-
-    // Lumières
-    scene.add(new THREE.AmbientLight(0x888888));
-    const light = new THREE.DirectionalLight(0xffffff, 1);
-    light.position.set(10, 20, 10);
-    scene.add(light);
-
-    // Variables pour la génération de chunks
-    const chunkSize = 8;  // Taille d'un chunk (8x8 blocs)
-    const chunkDepth = 20;  // Profondeur du chunk (20 blocs)
-    const maxChunks = 1;  // Générer seulement un chunk autour du joueur
-    const simplex = new SimplexNoise();
-
-    // Variable pour gérer la génération des chunks
-    let chunks = [];
-
-    // Fonction pour générer un chunk
-    function generateChunk(xOffset, zOffset) {
-      const materialStone = new THREE.MeshStandardMaterial({ color: 0x808080 });  // Gravier
-      const materialDirt = new THREE.MeshStandardMaterial({ color: 0x8B4513 });  // Terre
-      const materialGrass = new THREE.MeshStandardMaterial({ color: 0x228B22 });  // Herbe
-
-      const chunk = new THREE.Group();  // Group pour contenir les blocs du chunk
-
-      // Boucle pour générer les blocs d'un chunk
-      for (let x = 0; x < chunkSize; x++) {
-        for (let z = 0; z < chunkSize; z++) {
-          // Générer une hauteur aléatoire avec bruit de Perlin
-          const perlinNoise = simplex.noise2D((x + xOffset) * 0.1, (z + zOffset) * 0.1);
-          const height = Math.floor((perlinNoise * 10) + 60);  // Variation de terrain avec bruit
-
-          // Générer les blocs de fond pour chaque hauteur
-          for (let y = 0; y < chunkDepth; y++) {
-            let blockColor;
-
-            if (y >= height - 4 && y < height) {
-              // 4 derniers blocs (couches de terre)
-              blockColor = materialDirt;
-            } else if (y === height - 1) {
-              // La couche juste au-dessus de la terre (herbe)
-              blockColor = materialGrass;
-            } else {
-              // Tout le reste est en pierre (grise)
-              blockColor = materialStone;
-            }
-
-            // Créer le cube pour ce bloc
-            const block = new THREE.Mesh(
-              new THREE.BoxGeometry(1, 1, 1),
-              blockColor
-            );
-
-            // Positionner le bloc
-            block.position.set(x + xOffset, y, z + zOffset);
-            chunk.add(block);  // Ajouter le bloc au chunk
-          }
+        // Création du terrain avec le bruit de Perlin
+        const noise = new Noise(Math.random());
+        for (let i = 0; i < geometry.vertices.length; i++) {
+            const vertex = geometry.vertices[i];
+            const x = vertex.x / scale;
+            const y = vertex.z / scale;
+            vertex.y = noise.perlin2(x, y) * 10; // Altitude basée sur le bruit de Perlin
         }
-      }
 
-      return chunk;  // Retourne le chunk généré
-    }
+        const material = new THREE.MeshLambertMaterial({ color: 0x228822 });
+        const terrain = new THREE.Mesh(geometry, material);
+        scene.add(terrain);
 
-    // Fonction pour gérer la génération des chunks visibles
-    function loadChunks() {
-      // Effacer les anciens chunks (si la scène est trop remplie)
-      chunks.forEach(chunk => scene.remove(chunk));
-      chunks = [];
+        // Création du joueur (un cube simple)
+        const playerGeometry = new THREE.BoxGeometry(1, 2, 1);
+        const playerMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+        const player = new THREE.Mesh(playerGeometry, playerMaterial);
+        scene.add(player);
 
-      // Générer de nouveaux chunks autour du joueur
-      for (let x = -maxChunks; x <= maxChunks; x++) {
-        for (let z = -maxChunks; z <= maxChunks; z++) {
-          const chunk = generateChunk(x * chunkSize, z * chunkSize);
-          chunks.push(chunk);
-          scene.add(chunk);
-        }
-      }
-    }
+        // Position de la caméra pour une vue du dessus
+        camera.position.set(0, 50, 50);
+        camera.lookAt(new THREE.Vector3(0, 0, 0));
 
-    // Calculer la hauteur maximale pour la position initiale du joueur
-    function calculatePlayerSpawnPosition() {
-      let maxHeight = 0;
-      
-      // Trouver le plus haut bloc dans tous les chunks
-      chunks.forEach(chunk => {
-        chunk.children.forEach(block => {
-          if (block.position.y > maxHeight) {
-            maxHeight = block.position.y;
-          }
+        // Ajout de la lumière
+        const light = new THREE.PointLight(0xffffff, 1, 100);
+        light.position.set(10, 50, 10);
+        scene.add(light);
+
+        // Variables pour le déplacement avec le joystick
+        let joystickMovement = { x: 0, z: 0 };
+        let playerSpeed = 0.5;
+
+        // Configuration du joystick avec NippleJS
+        const joystick = nipplejs.create({
+            zone: document.getElementById('joystick'),
+            color: 'blue',
+            size: 100,
+            threshold: 0.1
         });
-      });
-      
-      // Positionner la caméra 5 blocs au-dessus du plus haut bloc
-      return maxHeight + 5;  // Ajout de 5 unités au-dessus du terrain
-    }
 
-    // Initialisation de la scène et des chunks
-    loadChunks();
-    camera.position.y = calculatePlayerSpawnPosition();
+        // Mettre à jour le mouvement du joueur avec le joystick
+        joystick.on('move', (evt, data) => {
+            joystickMovement.x = data.vector.x;
+            joystickMovement.z = data.vector.y;
+        });
 
-    // Vue FPS
-    let yaw = 0, pitch = 0;
-    let isMouseDown = false;
-    let joystickActive = false;
+        // Déplacement du joueur en fonction du joystick
+        function movePlayer() {
+            player.position.x += joystickMovement.x * playerSpeed;
+            player.position.z += joystickMovement.z * playerSpeed;
 
-    // Désactiver la rotation caméra quand le joystick est utilisé
-    document.addEventListener('mousedown', () => isMouseDown = true);
-    document.addEventListener('mouseup', () => isMouseDown = false);
-    document.addEventListener('mousemove', (e) => {
-      if (!isMouseDown || joystickActive) return;  // Ne pas tourner si joystick est actif
-      yaw -= e.movementX * 0.002;
-      pitch -= e.movementY * 0.002;
-      pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch));
-    });
-
-    camera.rotation.order = "YXZ";
-
-    // Déplacement + saut
-    let velocityY = 0;
-    let onGround = false;
-    document.addEventListener('keydown', (e) => {
-      if (e.code === 'Space' && onGround) {
-        velocityY = 0.15;
-        onGround = false;
-      }
-    });
-
-    // Joystick
-    let move = { x: 0, y: 0 };
-    const joystick = nipplejs.create({
-      zone: document.getElementById('joystick-container'),
-      mode: 'static',
-      position: { left: '60px', bottom: '60px' },
-      size: 100,
-      color: 'white'
-    });
-
-    joystick.on('move', (evt, data) => {
-      if (data && data.vector) {
-        move.x = -data.vector.x;  // Inversé pour avoir une direction correcte
-        move.y = -data.vector.y;  // Inversé pour avoir une direction correcte
-        joystickActive = true;  // Joystick actif
-      }
-    });
-    joystick.on('end', () => {
-      move = { x: 0, y: 0 };
-      joystickActive = false;  // Joystick inactif
-    });
-
-    // Gestion des collisions
-    function checkCollision(x, y, z) {
-      for (let chunk of chunks) {
-        for (let block of chunk.children) {
-          const bx = block.position.x;
-          const by = block.position.y;
-          const bz = block.position.z;
-
-          // Vérification de collision avec les blocs (environ 0.5 unité de marge)
-          if (Math.abs(bx - x) < 0.5 && Math.abs(by - y) < 0.5 && Math.abs(bz - z) < 0.5) {
-            return true;  // Collision détectée
-          }
+            // Vérification de la hauteur du terrain sous le joueur (simplification)
+            const playerPos = player.position;
+            const terrainHeight = terrain.geometry.vertices[Math.floor(playerPos.x) + size / 2 + (Math.floor(playerPos.z) + size / 2) * size].y;
+            player.position.y = terrainHeight + 1; // Maintien le joueur au-dessus du terrain
         }
-      }
-      return false;  // Aucune collision
-    }
 
-    // Loop
-    function animate() {
-      requestAnimationFrame(animate);
-
-      const angle = Math.atan2(move.x, move.y);
-      const dist = Math.min(1, Math.hypot(move.x, move.y));
-      const speed = 0.1 * dist;
-
-      // Calcul de la nouvelle position du joueur
-      const newX = camera.position.x + Math.sin(yaw + angle) * speed;
-      const newZ = camera.position.z - Math.cos(yaw + angle) * speed;
-      const newY = camera.position.y + velocityY;
-
-      // Vérification des collisions avant de déplacer
-      if (!checkCollision(newX, newY, newZ)) {
-        camera.position.x = newX;
-        camera.position.z = newZ;
-        camera.position.y = newY;
-      }
-
-      velocityY -= 0.01;
-      if (camera.position.y < playerHeight) {
-        camera.position.y = playerHeight;
-        velocityY = 0;
-        onGround = true;
-      }
-
-      camera.rotation.y = yaw;
-      camera.rotation.x = pitch;
-
-      renderer.render(scene, camera);
-    }
-
-    animate();
-
-    window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    });
-  </script>
+        // Fonction d'animation
+        function animate() {
+            requestAnimationFrame(animate);
+            movePlayer();
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
 </body>
 </html>
