@@ -50,12 +50,18 @@
     // Variables pour la génération de chunks
     const chunkSize = 16;  // Taille d'un chunk (16x16 blocs)
     const chunkDepth = 100;  // Profondeur du chunk (100 blocs)
-    
+    const maxChunks = 4;  // Nombre de chunks à générer à l'écran
+
+    // Variable pour gérer la génération des chunks
+    let chunks = [];
+
     // Fonction pour générer un chunk
     function generateChunk(xOffset, zOffset) {
       const materialStone = new THREE.MeshStandardMaterial({ color: 0x808080 });  // Gravier
       const materialDirt = new THREE.MeshStandardMaterial({ color: 0x8B4513 });  // Terre
       const materialGrass = new THREE.MeshStandardMaterial({ color: 0x228B22 });  // Herbe
+
+      const chunk = new THREE.Group();  // Group pour contenir les blocs du chunk
 
       // Boucle pour générer les blocs d'un chunk
       for (let x = 0; x < chunkSize; x++) {
@@ -66,7 +72,7 @@
           // Générer les blocs de fond pour chaque hauteur
           for (let y = 0; y < chunkDepth; y++) {
             let blockColor;
-            
+
             if (y >= height - 4 && y < height) {
               // 4 derniers blocs (couches de terre)
               blockColor = materialDirt;
@@ -86,18 +92,32 @@
 
             // Positionner le bloc
             block.position.set(x + xOffset, y, z + zOffset);
-            scene.add(block);
+            chunk.add(block);  // Ajouter le bloc au chunk
           }
+        }
+      }
+
+      return chunk;  // Retourne le chunk généré
+    }
+
+    // Fonction pour gérer la génération des chunks visibles
+    function loadChunks() {
+      // Effacer les anciens chunks (si la scène est trop remplie)
+      chunks.forEach(chunk => scene.remove(chunk));
+      chunks = [];
+
+      // Générer de nouveaux chunks autour du joueur
+      for (let x = -maxChunks; x <= maxChunks; x++) {
+        for (let z = -maxChunks; z <= maxChunks; z++) {
+          const chunk = generateChunk(x * chunkSize, z * chunkSize);
+          chunks.push(chunk);
+          scene.add(chunk);
         }
       }
     }
 
-    // Générer plusieurs chunks pour tester
-    for (let x = -5; x < 5; x++) {
-      for (let z = -5; z < 5; z++) {
-        generateChunk(x * chunkSize, z * chunkSize);
-      }
-    }
+    // Initialiser les chunks au démarrage
+    loadChunks();
 
     // Vue FPS
     let yaw = 0, pitch = 0;
