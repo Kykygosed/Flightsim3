@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Joueur + Joystick</title>
+  <title>Terrain Perlin + Joystick</title>
   <style>
     body { margin: 0; overflow: hidden; }
     #joystickZone {
       position: fixed;
       bottom: 20px;
       left: 20px;
-      width: 120px;
-      height: 120px;
+      width: 150px;
+      height: 150px;
       z-index: 10;
     }
   </style>
@@ -22,10 +22,70 @@
   <div id="joystickZone"></div>
 
   <script>
-    // Scene
-    const scene = new THREE.Scene();
+    // ======= Perlin Noise Simplex =========
+    class Perlin {
+      constructor() {
+        this.grad3 = [
+          [1,1,0],[-1,1,0],[1,-1,0],[-1,-1,0],
+          [1,0,1],[-1,0,1],[1,0,-1],[-1,0,-1],
+          [0,1,1],[0,-1,1],[0,1,-1],[0,-1,-1]
+        ];
+        this.p = [];
+        for (let i = 0; i < 256; i++) this.p[i] = Math.floor(Math.random()*256);
+        this.perm = [];
+        for(let i=0; i<512; i++) this.perm[i]=this.p[i & 255];
+      }
 
-    // Camera ortho isométrique
+      dot(g, x, y) {
+        return g[0]*x + g[1]*y;
+      }
+
+      fade(t) {
+        return t*t*t*(t*(t*6-15)+10);
+      }
+
+      lerp(a, b, t) {
+        return (1 - t) * a + t * b;
+      }
+
+      noise(xin, yin) {
+        const X = Math.floor(xin) & 255;
+        const Y = Math.floor(yin) & 255;
+        const x = xin - Math.floor(xin);
+        const y = yin - Math.floor(yin);
+
+        const u = this.fade(x);
+        const v = this.fade(y);
+
+        const aa = this.perm[X+this.perm[Y]] % 12;
+        const ab = this.perm[X+this.perm[Y+1]] % 12;
+        const ba = this.perm[X+1+this.perm[Y]] % 12;
+        const bb = this.perm[X+1+this.perm[Y+1]] % 12;
+
+        const gradAA = this.grad3[aa];
+        const gradAB = this.grad3[ab];
+        const gradBA = this.grad3[ba];
+        const gradBB = this.grad3[bb];
+
+        const x1 = this.lerp(
+          this.dot(gradAA, x, y),
+          this.dot(gradBA, x-1, y),
+          u
+        );
+        const x2 = this.lerp(
+          this.dot(gradAB, x, y-1),
+          this.dot(gradBB, x-1, y-1),
+          u
+        );
+
+        return this.lerp(x1, x2, v);
+      }
+    }
+
+    const noise = new Perlin();
+
+    // ======= THREE.JS Init =======
+    const scene = new THREE.Scene();
     const aspect = window.innerWidth / window.innerHeight;
     const d = 60;
     const camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
@@ -36,39 +96,49 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    // Lumière
+    // Lights
     scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-    const light = new THREE.DirectionalLight(0xffffff, 0.6);
-    light.position.set(100, 100, 50);
-    scene.add(light);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    dirLight.position.set(100, 100, 100);
+    scene.add(dirLight);
 
-    // Terrain
-    const terrainGeo = new THREE.PlaneGeometry(100, 100, 10, 10);
-    terrainGeo.rotateX(-Math.PI / 2);
-    const terrainMat = new THREE.MeshLambertMaterial({ color: 0x55aa55 });
-    const terrain = new THREE.Mesh(terrainGeo, terrainMat);
+    // Terrain avec Perlin doux
+    const size = 100;
+    const segments = 100;
+    const geo = new THREE.PlaneGeometry(size, size, segments, segments);
+    geo.rotateX(-Math.PI / 2);
+
+    const scale = 0.1; // pour terrain lisse
+    for (let i = 0; i < geo.attributes.position.count; i++) {
+      const x = geo.attributes.position.getX(i);
+      const z = geo.attributes.position.getZ(i);
+      const y = noise.noise(x * scale, z * scale) * 5; // Hauteur douce
+      geo.attributes.position.setY(i, y);
+    }
+    geo.computeVertexNormals();
+
+    const terrain = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: 0x55aa55, wireframe: false }));
     scene.add(terrain);
 
-    // Joueur
+    // Joueur cube
     const player = new THREE.Mesh(
       new THREE.BoxGeometry(2, 4, 2),
       new THREE.MeshLambertMaterial({ color: 0x0000ff })
     );
-    player.position.set(0, 2, 0);
+    player.position.set(0, 4, 0);
     scene.add(player);
 
     // Mouvement
     let move = { x: 0, z: 0 };
-    const speed = 20;
+    const speed = 10;
     const clock = new THREE.Clock();
 
     // Joystick
     const joystick = nipplejs.create({
       zone: document.getElementById('joystickZone'),
       mode: 'static',
-      position: { left: '60px', bottom: '60px' },
-      color: 'blue',
-      size: 100
+      position: { left: '80px', bottom: '80px' },
+      color: 'blue'
     });
 
     joystick.on('move', (evt, data) => {
@@ -83,7 +153,7 @@
       move.z = 0;
     });
 
-    // Animation
+    // Boucle
     function animate() {
       requestAnimationFrame(animate);
       const delta = clock.getDelta();
@@ -91,7 +161,6 @@
       player.position.z += move.z * speed * delta;
       renderer.render(scene, camera);
     }
-
     animate();
 
     window.addEventListener('resize', () => {
