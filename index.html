@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
+  <title>Terrain Cubique + Joystick</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Terrain Perlin + Joystick</title>
   <style>
     body { margin: 0; overflow: hidden; }
     #joystickZone {
@@ -20,120 +20,95 @@
 </head>
 <body>
   <div id="joystickZone"></div>
-
   <script>
-    // ======= Perlin Noise Simplex =========
+    // === Perlin noise simple ===
     class Perlin {
       constructor() {
-        this.grad3 = [
-          [1,1,0],[-1,1,0],[1,-1,0],[-1,-1,0],
-          [1,0,1],[-1,0,1],[1,0,-1],[-1,0,-1],
-          [0,1,1],[0,-1,1],[0,1,-1],[0,-1,-1]
-        ];
-        this.p = [];
-        for (let i = 0; i < 256; i++) this.p[i] = Math.floor(Math.random()*256);
-        this.perm = [];
-        for(let i=0; i<512; i++) this.perm[i]=this.p[i & 255];
+        this.p = Array.from({length: 512}, (_, i) => i % 256).sort(() => Math.random() - 0.5);
       }
-
-      dot(g, x, y) {
-        return g[0]*x + g[1]*y;
+      fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+      lerp(a, b, t) { return a + t * (b - a); }
+      grad(hash, x, y) {
+        const h = hash & 15;
+        const u = h < 8 ? x : y;
+        const v = h < 4 ? y : h === 12 || h === 14 ? x : 0;
+        return ((h & 1) ? -u : u) + ((h & 2) ? -v : v);
       }
-
-      fade(t) {
-        return t*t*t*(t*(t*6-15)+10);
-      }
-
-      lerp(a, b, t) {
-        return (1 - t) * a + t * b;
-      }
-
-      noise(xin, yin) {
-        const X = Math.floor(xin) & 255;
-        const Y = Math.floor(yin) & 255;
-        const x = xin - Math.floor(xin);
-        const y = yin - Math.floor(yin);
-
-        const u = this.fade(x);
-        const v = this.fade(y);
-
-        const aa = this.perm[X+this.perm[Y]] % 12;
-        const ab = this.perm[X+this.perm[Y+1]] % 12;
-        const ba = this.perm[X+1+this.perm[Y]] % 12;
-        const bb = this.perm[X+1+this.perm[Y+1]] % 12;
-
-        const gradAA = this.grad3[aa];
-        const gradAB = this.grad3[ab];
-        const gradBA = this.grad3[ba];
-        const gradBB = this.grad3[bb];
-
-        const x1 = this.lerp(
-          this.dot(gradAA, x, y),
-          this.dot(gradBA, x-1, y),
-          u
-        );
-        const x2 = this.lerp(
-          this.dot(gradAB, x, y-1),
-          this.dot(gradBB, x-1, y-1),
-          u
-        );
-
-        return this.lerp(x1, x2, v);
+      noise(x, y) {
+        const X = Math.floor(x) & 255;
+        const Y = Math.floor(y) & 255;
+        const xf = x - Math.floor(x);
+        const yf = y - Math.floor(y);
+        const u = this.fade(xf);
+        const v = this.fade(yf);
+        const p = this.p;
+        const aa = p[p[X] + Y];
+        const ab = p[p[X] + Y + 1];
+        const ba = p[p[X + 1] + Y];
+        const bb = p[p[X + 1] + Y + 1];
+        const x1 = this.lerp(this.grad(aa, xf, yf), this.grad(ba, xf - 1, yf), u);
+        const x2 = this.lerp(this.grad(ab, xf, yf - 1), this.grad(bb, xf - 1, yf - 1), u);
+        return (this.lerp(x1, x2, v) + 1) / 2;
       }
     }
 
     const noise = new Perlin();
 
-    // ======= THREE.JS Init =======
+    // === Scene and camera ===
     const scene = new THREE.Scene();
     const aspect = window.innerWidth / window.innerHeight;
-    const d = 60;
+    const d = 50;
     const camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
-    camera.position.set(100, 100, 100);
+    camera.position.set(60, 60, 60);
     camera.lookAt(scene.position);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    // Lights
-    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    dirLight.position.set(100, 100, 100);
-    scene.add(dirLight);
+    // === Lights ===
+    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+    const light = new THREE.DirectionalLight(0xffffff, 1);
+    light.position.set(100, 100, 100);
+    scene.add(light);
 
-    // Terrain avec Perlin doux
-    const size = 100;
-    const segments = 100;
-    const geo = new THREE.PlaneGeometry(size, size, segments, segments);
-    geo.rotateX(-Math.PI / 2);
+    // === Terrain blocks ===
+    const blockSize = 4;
+    const worldSize = 20; // 20x20
+    const maxHeight = 5;
+    const scale = 0.1;
 
-    const scale = 0.1; // pour terrain lisse
-    for (let i = 0; i < geo.attributes.position.count; i++) {
-      const x = geo.attributes.position.getX(i);
-      const z = geo.attributes.position.getZ(i);
-      const y = noise.noise(x * scale, z * scale) * 5; // Hauteur douce
-      geo.attributes.position.setY(i, y);
+    const blockGeo = new THREE.BoxGeometry(blockSize, blockSize, blockSize);
+    const blockMat = new THREE.MeshLambertMaterial({ color: 0x55aa55 });
+
+    for (let x = 0; x < worldSize; x++) {
+      for (let z = 0; z < worldSize; z++) {
+        const height = Math.floor(noise.noise(x * scale, z * scale) * maxHeight);
+        for (let y = 0; y <= height; y++) {
+          const block = new THREE.Mesh(blockGeo, blockMat);
+          block.position.set(
+            x * blockSize,
+            y * blockSize,
+            z * blockSize
+          );
+          scene.add(block);
+        }
+      }
     }
-    geo.computeVertexNormals();
 
-    const terrain = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: 0x55aa55, wireframe: false }));
-    scene.add(terrain);
-
-    // Joueur cube
+    // === Joueur (cube bleu) ===
     const player = new THREE.Mesh(
-      new THREE.BoxGeometry(2, 4, 2),
+      new THREE.BoxGeometry(3, 5, 3),
       new THREE.MeshLambertMaterial({ color: 0x0000ff })
     );
-    player.position.set(0, 4, 0);
+    player.position.set(10 * blockSize, blockSize * (maxHeight + 1), 10 * blockSize);
     scene.add(player);
 
-    // Mouvement
+    // === Mouvement du joueur ===
     let move = { x: 0, z: 0 };
-    const speed = 10;
+    const speed = 20;
     const clock = new THREE.Clock();
 
-    // Joystick
     const joystick = nipplejs.create({
       zone: document.getElementById('joystickZone'),
       mode: 'static',
@@ -153,7 +128,7 @@
       move.z = 0;
     });
 
-    // Boucle
+    // === Animation ===
     function animate() {
       requestAnimationFrame(animate);
       const delta = clock.getDelta();
@@ -161,6 +136,7 @@
       player.position.z += move.z * speed * delta;
       renderer.render(scene, camera);
     }
+
     animate();
 
     window.addEventListener('resize', () => {
