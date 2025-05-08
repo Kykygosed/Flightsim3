@@ -1,102 +1,107 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>PFD Horizon</title>
+  <title>Mini Minecraft avec Joystick</title>
   <style>
-    html, body {
+    body, html {
       margin: 0;
+      padding: 0;
       overflow: hidden;
-      background: black;
+      background: #000;
     }
-
     canvas {
       display: block;
-      margin: auto;
-      background: black;
+    }
+    #joystick-container {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      width: 120px;
+      height: 120px;
+      z-index: 10;
     }
   </style>
 </head>
 <body>
-<canvas id="pfd" width="500" height="500"></canvas>
+  <div id="joystick-container"></div>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.9.0/dist/nipplejs.min.js"></script>
+  <script>
+    // Scene setup
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
 
-<script>
-  const canvas = document.getElementById("pfd");
-  const ctx = canvas.getContext("2d");
+    // Light
+    const light = new THREE.DirectionalLight(0xffffff, 1);
+    light.position.set(10, 20, 10);
+    scene.add(light);
 
-  let roll = 0;   // degrés
-  let pitch = 0;  // pixels
-
-  let isDragging = false;
-  let lastX = 0;
-  let lastY = 0;
-
-  function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.save();
-
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-
-    ctx.translate(centerX, centerY);
-    ctx.rotate(-roll * Math.PI / 180);
-    ctx.translate(0, pitch);
-
-    const bandHeight = 350;
-
-    for (let y = -3000; y < 3000; y += bandHeight * 2) {
-      // ciel
-      ctx.fillStyle = "#0099ff";
-      ctx.fillRect(-1000, y, 2000, bandHeight);
-      // sol
-      ctx.fillStyle = "#996633";
-      ctx.fillRect(-1000, y + bandHeight, 2000, bandHeight);
+    // Simple terrain (10x10 flat blocks)
+    const blockSize = 1;
+    const geometry = new THREE.BoxGeometry(blockSize, blockSize, blockSize);
+    const material = new THREE.MeshStandardMaterial({ color: 0x55aa55 });
+    for (let x = -5; x < 5; x++) {
+      for (let z = -5; z < 5; z++) {
+        const cube = new THREE.Mesh(geometry, material);
+        cube.position.set(x * blockSize, -blockSize / 2, z * blockSize);
+        scene.add(cube);
+      }
     }
 
-    // Ligne de l'horizon
-    ctx.strokeStyle = "white";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(-canvas.width, 0);
-    ctx.lineTo(canvas.width, 0);
-    ctx.stroke();
+    // Camera position
+    camera.position.set(0, 1.5, 5);
 
-    ctx.restore();
+    // Joystick setup
+    const joystick = nipplejs.create({
+      zone: document.getElementById('joystick-container'),
+      mode: 'static',
+      position: { left: '50px', bottom: '50px' },
+      color: 'white',
+      size: 100
+    });
 
-    // Réticule fixe au centre
-    ctx.strokeStyle = "white";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(centerX - 15, centerY);
-    ctx.lineTo(centerX + 15, centerY);
-    ctx.stroke();
-  }
+    let move = { x: 0, y: 0 };
 
-  canvas.addEventListener("pointerdown", e => {
-    isDragging = true;
-    lastX = e.clientX;
-    lastY = e.clientY;
-  });
+    joystick.on('move', (evt, data) => {
+      if (data && data.vector) {
+        move.x = data.vector.x;
+        move.y = data.vector.y;
+      }
+    });
 
-  canvas.addEventListener("pointermove", e => {
-    if (!isDragging) return;
-    const dx = e.clientX - lastX;
-    const dy = e.clientY - lastY;
+    joystick.on('end', () => {
+      move.x = 0;
+      move.y = 0;
+    });
 
-    roll += dx * 0.3;
-    pitch += dy;
+    // Animate loop
+    function animate() {
+      requestAnimationFrame(animate);
 
-    lastX = e.clientX;
-    lastY = e.clientY;
+      // Simple camera movement
+      const speed = 0.05;
+      const angle = Math.atan2(move.x, move.y);
+      const distance = Math.sqrt(move.x * move.x + move.y * move.y);
+      if (distance > 0) {
+        camera.position.x += Math.sin(angle) * speed;
+        camera.position.z += Math.cos(angle) * speed;
+      }
 
-    draw();
-  });
+      renderer.render(scene, camera);
+    }
 
-  canvas.addEventListener("pointerup", () => {
-    isDragging = false;
-  });
+    animate();
 
-  draw();
-</script>
+    // Resize
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth/window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
 </body>
 </html>
