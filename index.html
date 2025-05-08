@@ -47,22 +47,55 @@
     light.position.set(10, 20, 10);
     scene.add(light);
 
-    // Terrain plat aléatoire simple (10x10)
-    const size = 20;
-    const blockSize = 1;
-    const material = new THREE.MeshStandardMaterial({ color: 0x55aa55 });
+    // Variables pour la génération de chunks
+    const chunkSize = 16;  // Taille d'un chunk (16x16 blocs)
+    const chunkDepth = 100;  // Profondeur du chunk (100 blocs)
+    
+    // Fonction pour générer un chunk
+    function generateChunk(xOffset, zOffset) {
+      const materialStone = new THREE.MeshStandardMaterial({ color: 0x808080 });  // Gravier
+      const materialDirt = new THREE.MeshStandardMaterial({ color: 0x8B4513 });  // Terre
+      const materialGrass = new THREE.MeshStandardMaterial({ color: 0x228B22 });  // Herbe
 
-    for (let x = -size/2; x < size/2; x++) {
-      for (let z = -size/2; z < size/2; z++) {
-        const height = Math.floor(Math.random() * 4);
-        for (let y = 0; y <= height; y++) {
-          const cube = new THREE.Mesh(
-            new THREE.BoxGeometry(blockSize, blockSize, blockSize),
-            material
-          );
-          cube.position.set(x, y - 1, z);
-          scene.add(cube);
+      // Boucle pour générer les blocs d'un chunk
+      for (let x = 0; x < chunkSize; x++) {
+        for (let z = 0; z < chunkSize; z++) {
+          // Générer une hauteur aléatoire pour la colonne de blocs
+          const height = Math.floor(Math.random() * 10) + 60;  // Variation de terrain
+          
+          // Générer les blocs de fond pour chaque hauteur
+          for (let y = 0; y < chunkDepth; y++) {
+            let blockColor;
+            
+            if (y >= height - 4 && y < height) {
+              // 4 derniers blocs (couches de terre)
+              blockColor = materialDirt;
+            } else if (y === height - 1) {
+              // La couche juste au-dessus de la terre (herbe)
+              blockColor = materialGrass;
+            } else {
+              // Tout le reste est en pierre (grise)
+              blockColor = materialStone;
+            }
+
+            // Créer le cube pour ce bloc
+            const block = new THREE.Mesh(
+              new THREE.BoxGeometry(1, 1, 1),
+              blockColor
+            );
+
+            // Positionner le bloc
+            block.position.set(x + xOffset, y, z + zOffset);
+            scene.add(block);
+          }
         }
+      }
+    }
+
+    // Générer plusieurs chunks pour tester
+    for (let x = -5; x < 5; x++) {
+      for (let z = -5; z < 5; z++) {
+        generateChunk(x * chunkSize, z * chunkSize);
       }
     }
 
@@ -105,7 +138,6 @@
 
     joystick.on('move', (evt, data) => {
       if (data && data.vector) {
-        // Inverser la direction du joystick
         move.x = -data.vector.x;  // Inversé pour avoir une direction correcte
         move.y = -data.vector.y;  // Inversé pour avoir une direction correcte
         joystickActive = true;  // Joystick actif
