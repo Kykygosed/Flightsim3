@@ -36,7 +36,6 @@
 
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     const playerHeight = 2;  // Hauteur du joueur pour éviter qu'il ne traverse le terrain
-    camera.position.set(0, playerHeight + 2, 5);  // On positionne la caméra au-dessus du terrain
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -117,8 +116,26 @@
       }
     }
 
-    // Initialiser les chunks au démarrage
+    // Calculer la hauteur maximale pour la position initiale du joueur
+    function calculatePlayerSpawnPosition() {
+      let maxHeight = 0;
+      
+      // Trouver le plus haut bloc dans tous les chunks
+      chunks.forEach(chunk => {
+        chunk.children.forEach(block => {
+          if (block.position.y > maxHeight) {
+            maxHeight = block.position.y;
+          }
+        });
+      });
+      
+      // Positionner la caméra 5 blocs au-dessus du plus haut bloc
+      return maxHeight + 5;  // Ajout de 5 unités au-dessus du terrain
+    }
+
+    // Initialisation de la scène et des chunks
     loadChunks();
+    camera.position.y = calculatePlayerSpawnPosition();
 
     // Vue FPS
     let yaw = 0, pitch = 0;
